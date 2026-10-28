@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">一隅记账</string>
+    <string name="notification_service_name">一隅记账 · 付款通知识别</string>
+    <string name="accessibility_service_name">一隅记账 · 付款页面识别</string>
+    <string name="accessibility_description">在你主动开启并授权后，仅观察你选中且已有页面规则的付款平台，读取当前可访问的页面文字，在本机提取付款金额、状态及日期。发现输入框、密码或聊天类节点、页面超限时放弃解析。不会自动点击、输入、付款或截屏；不上传，不保存整段页面原文。你可以随时关闭。页面候选需要核对，无法保证每笔付款都能识别。</string>
+</resources>

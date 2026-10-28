@@ -1,0 +1,18 @@
+* text=auto eol=lf
+
+gradlew text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=lf
+*.java text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+*.xml text eol=lf
+*.md text eol=lf
+
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.apk binary

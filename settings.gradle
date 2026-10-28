@@ -1,0 +1,52 @@
+pluginManagement {
+    repositories {
+        def googleGroups = {
+            includeGroupByRegex 'com\\.android(\\..*)?'
+            includeGroupByRegex 'androidx(\\..*)?'
+            includeGroupByRegex 'com\\.google\\.android(\\..*)?'
+            includeGroupByRegex 'com\\.google\\.firebase(\\..*)?'
+            includeGroup 'com.google.gms'
+            includeGroup 'com.google.testing.platform'
+        }
+        def fallbackFirst = System.getenv('LOCALLEDGER_GOOGLE_MAVEN_FALLBACK_FIRST') == 'true'
+        def officialFallback = {
+            maven {
+                name = 'GoogleOfficialFallback'
+                url = 'https://dl-ssl.google.com/android/maven2/'
+                content(googleGroups)
+            }
+        }
+        if (fallbackFirst) { officialFallback() }
+        google { content(googleGroups) }
+        mavenCentral()
+        if (!fallbackFirst) { officialFallback() }
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        def googleGroups = {
+            includeGroupByRegex 'com\\.android(\\..*)?'
+            includeGroupByRegex 'androidx(\\..*)?'
+            includeGroupByRegex 'com\\.google\\.android(\\..*)?'
+            includeGroupByRegex 'com\\.google\\.firebase(\\..*)?'
+            includeGroup 'com.google.gms'
+            includeGroup 'com.google.testing.platform'
+        }
+        def fallbackFirst = System.getenv('LOCALLEDGER_GOOGLE_MAVEN_FALLBACK_FIRST') == 'true'
+        def officialFallback = {
+            maven {
+                name = 'GoogleOfficialFallback'
+                url = 'https://dl-ssl.google.com/android/maven2/'
+                content(googleGroups)
+            }
+        }
+        if (fallbackFirst) { officialFallback() }
+        google { content(googleGroups) }
+        mavenCentral()
+        if (!fallbackFirst) { officialFallback() }
+    }
+}
+rootProject.name = 'YiyuLedger'
+include ':app'

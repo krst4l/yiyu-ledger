@@ -1,0 +1,47 @@
+# Local build state and IDE settings
+.gradle/
+**/build/
+.idea/
+.vscode/
+local.properties
+.android/
+*.iml
+*.hprof
+*.log
+
+# Generated distribution artifacts
+*.apk
+*.aab
+*.apks
+
+# Signing material and local credentials
+*.jks
+*.keystore
+*.key
+*.pem
+*.p12
+*.pfx
+adbkey*
+keystore.properties
+signing.properties
+.env
+.env.*
+
+# Personal ledgers, exports, captures and research caches
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.csv
+research/
+private-debug/
+captures/
+outputs/
+exports/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini
