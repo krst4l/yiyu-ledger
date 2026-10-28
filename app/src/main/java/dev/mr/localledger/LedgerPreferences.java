@@ -9,9 +9,45 @@ import java.util.List;
 
 /** Local UI preferences. Budgets and custom category names never leave this device. */
 public final class LedgerPreferences {
+    private static final long MAX_AMOUNT_FEN = 999_999_999_99L;
     private final SharedPreferences preferences;
     public LedgerPreferences(Context context) {
         preferences = context.getApplicationContext().getSharedPreferences("ledger_ui", Context.MODE_PRIVATE);
+    }
+    public boolean lootEnabled() { return preferences.getBoolean("loot_enabled", true); }
+    public void setLootEnabled(boolean enabled) {
+        preferences.edit().putBoolean("loot_enabled", enabled).apply();
+    }
+    /** One of three original operator appearances; unrelated to any game character. */
+    public int operatorStyle() {
+        int value;
+        try { value = preferences.getInt("operator_style", 0); }
+        catch (ClassCastException malformed) { return 0; }
+        return value >= 0 && value <= 2 ? value : 0;
+    }
+    public void setOperatorStyle(int style) {
+        if (style < 0 || style > 2) throw new IllegalArgumentException("Invalid operator style");
+        preferences.edit().putInt("operator_style", style).apply();
+    }
+    /** RMB reference in fen, used only for optional visual equivalents. */
+    public long lootReferenceFen(String id, long fallback) {
+        validateLootId(id);
+        if (fallback < 0 || fallback > MAX_AMOUNT_FEN) throw new IllegalArgumentException("Invalid reference fallback");
+        long value;
+        try { value = preferences.getLong("loot_reference_" + id, fallback); }
+        catch (ClassCastException malformed) { return fallback; }
+        return value > 0 && value <= MAX_AMOUNT_FEN ? value : fallback;
+    }
+    public void setLootReferenceFen(String id, long fen) {
+        validateLootId(id);
+        validateLootReference(fen);
+        preferences.edit().putLong("loot_reference_" + id, fen).apply();
+    }
+    private static void validateLootId(String id) {
+        if (id == null || !id.matches("[a-z0-9_]{1,40}")) throw new IllegalArgumentException("Invalid reference item");
+    }
+    private static void validateLootReference(long fen) {
+        if (fen <= 0 || fen > MAX_AMOUNT_FEN) throw new IllegalArgumentException("参考金额应大于 0 且不超过 999999999.99 元");
     }
     public long monthlyBudget(int year, int month) { return preferences.getLong("budget_" + year + "_" + month, 0); }
     public void setMonthlyBudget(int year, int month, long fen) {

@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.view.View;
 
 import java.math.BigDecimal;
@@ -16,10 +17,11 @@ import java.util.Locale;
 
 /** Original vector drawing primitives. No image assets, external fonts or chart libraries. */
 public final class LedgerUi {
-    private static final int ACCENT = Color.rgb(79, 99, 217);
-    private static final int INK = Color.rgb(29, 41, 66);
-    private static final int MUTED = Color.rgb(131, 144, 164);
-    private static final int LINE = Color.rgb(232, 236, 243);
+    private static final int ACCENT = Color.rgb(227, 91, 83);
+    private static final int INK = Color.rgb(241, 242, 236);
+    private static final int MUTED = Color.rgb(154, 168, 158);
+    private static final int LINE = Color.rgb(48, 58, 52);
+    private static final int INCOME = Color.rgb(213, 216, 200);
 
     private LedgerUi() {}
 
@@ -61,7 +63,7 @@ public final class LedgerUi {
             setMinimumHeight(Math.round(dp(context, 36)));
             setContentDescription(iconDescription(name));
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeCap(Paint.Cap.SQUARE);
             paint.setStrokeJoin(Paint.Join.ROUND);
         }
 
@@ -75,7 +77,7 @@ public final class LedgerUi {
                 paint.setStyle(Paint.Style.FILL);
                 paint.setColor(backgroundColor);
                 canvas.drawRoundRect(left, top, left + size, top + size,
-                        size * .3f, size * .3f, paint);
+                        size * .1f, size * .1f, paint);
             }
             canvas.save();
             float glyph = size * (Color.alpha(backgroundColor) > 0 ? .61f : .78f);
@@ -251,12 +253,13 @@ public final class LedgerUi {
             float height = Math.min(dp(getContext(), 5), getHeight() - getPaddingTop() - getPaddingBottom());
             if (right <= left || height <= 0) return;
             float top = getPaddingTop() + (getHeight() - getPaddingTop() - getPaddingBottom() - height) / 2f;
+            float radius = Math.min(dp(getContext(), 1), height / 2);
             paint.setColor(LINE);
-            canvas.drawRoundRect(left, top, right, top + height, height / 2, height / 2, paint);
+            canvas.drawRoundRect(left, top, right, top + height, radius, radius, paint);
             if (fraction > 0) {
                 paint.setColor(ACCENT);
                 canvas.drawRoundRect(left, top, left + (right - left) * (float) fraction,
-                        top + height, height / 2, height / 2, paint);
+                        top + height, radius, radius, paint);
             }
         }
     }
@@ -290,6 +293,7 @@ public final class LedgerUi {
                 }
             }
             max = highest;
+            paint.setTypeface(Typeface.create("monospace", Typeface.NORMAL));
             setMinimumHeight(Math.round(dp(context, 192)));
             String title = income ? "每日收入" : "每日支出";
             setContentDescription(highest == 0 ? title + "图表，本月暂无已确认记录"
@@ -310,6 +314,19 @@ public final class LedgerUi {
             if (right <= left || bottom <= top) return;
             paint.setStrokeWidth(Math.max(1, density * .7f));
             paint.setTextSize(textSize);
+            float legendBaseline = top - dp(getContext(), 7);
+            paint.setColor(INK);
+            paint.setTextAlign(Paint.Align.LEFT);
+            canvas.drawText("元", getPaddingLeft(), legendBaseline, paint);
+            String legend = income ? "收入 / CNY" : "支出 / CNY";
+            float legendWidth = paint.measureText(legend);
+            paint.setColor(income ? INCOME : ACCENT);
+            canvas.drawRect(right - legendWidth - dp(getContext(), 16),
+                    legendBaseline - dp(getContext(), 6),
+                    right - legendWidth - dp(getContext(), 6),
+                    legendBaseline - dp(getContext(), 2), paint);
+            paint.setColor(INK);
+            canvas.drawText(legend, right - legendWidth, legendBaseline, paint);
             paint.setTextAlign(Paint.Align.RIGHT);
             // Use the actual maximum as the scale so small amounts are never disguised as empty.
             double ceiling = max > 0 ? max : 100d;
@@ -337,10 +354,10 @@ public final class LedgerUi {
                 long value = values.get(i);
                 if (value > 0 && max > 0) {
                     float height = (float) ((double) value / ceiling * (bottom - top));
-                    paint.setColor(ACCENT);
+                    paint.setColor(income ? INCOME : ACCENT);
                     canvas.drawRoundRect(x - barWidth / 2, bottom - height, x + barWidth / 2,
-                            bottom, Math.min(barWidth / 2, dp(getContext(), 2)),
-                            Math.min(barWidth / 2, dp(getContext(), 2)), paint);
+                            bottom, Math.min(barWidth / 2, dp(getContext(), .8f)),
+                            Math.min(barWidth / 2, dp(getContext(), .8f)), paint);
                 }
                 int day = labels.get(i);
                 if (count <= 10 || i == 0 || i == count - 1 || day % 5 == 0 && i < count - 2) {
@@ -350,10 +367,6 @@ public final class LedgerUi {
                     canvas.drawText(Integer.toString(day), x, bottom + dp(getContext(), 18), paint);
                 }
             }
-            paint.setColor(INK);
-            paint.setTextSize(sp(getContext(), 10));
-            paint.setTextAlign(Paint.Align.LEFT);
-            canvas.drawText("元", getPaddingLeft(), top - dp(getContext(), 6), paint);
         }
 
         private static String axisLabel(double yuan) {

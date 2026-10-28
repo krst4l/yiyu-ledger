@@ -40,11 +40,13 @@ import java.util.Set;
 
 /** A local entry draft. No database write occurs until SaveHandler accepts it. */
 public final class QuickEntryDialog extends Dialog {
-    private static final int BLUE = Color.rgb(79, 99, 217);
-    private static final int INK = Color.rgb(29, 41, 66);
-    private static final int MUTED = Color.rgb(110, 122, 145);
-    private static final int BACKGROUND = Color.rgb(245, 247, 251);
-    private static final int PALE_BLUE = Color.rgb(232, 236, 255);
+    private static final int BLUE = Color.rgb(227, 91, 83);
+    private static final int INK = Color.rgb(241, 242, 236);
+    private static final int MUTED = Color.rgb(154, 168, 158);
+    private static final int BACKGROUND = Color.rgb(16, 20, 18);
+    private static final int SURFACE = Color.rgb(25, 32, 29);
+    private static final int LINE = Color.rgb(48, 58, 52);
+    private static final int PALE_BLUE = Color.rgb(53, 35, 31);
     private static final long MAX_AMOUNT_FEN = 999_999_999_99L;
     private static final String[] DIRECTIONS = {"expense", "income", "refund", "transfer"};
     private static final String[] DIRECTION_LABELS = {"支出", "收入", "退款", "转账"};
@@ -87,7 +89,7 @@ public final class QuickEntryDialog extends Dialog {
 
     public QuickEntryDialog(Activity activity, LedgerDb.Entry existing, Bundle restoredDraft,
                             long initialTime, SaveHandler handler) {
-        super(activity, android.R.style.Theme_Material_Light_NoActionBar);
+        super(activity, R.style.AppTheme);
         if (handler == null) throw new IllegalArgumentException("SaveHandler is required");
         this.activity = activity;
         this.saveHandler = handler;
@@ -127,9 +129,12 @@ public final class QuickEntryDialog extends Dialog {
             if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false);
             if (Build.VERSION.SDK_INT >= 29) window.setNavigationBarContrastEnforced(false);
             window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            if (Build.VERSION.SDK_INT >= 30 && window.getInsetsController() != null) {
+                window.getInsetsController().setSystemBarsAppearance(0,
+                        android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                                | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            }
             window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                     | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         }
@@ -182,8 +187,8 @@ public final class QuickEntryDialog extends Dialog {
 
         addSection(content, text("交易时间", 15, INK, true), 20);
         LinearLayout dateRow = horizontal();
-        dateButton = button("", INK, Color.WHITE, 14);
-        timeButton = button("", INK, Color.WHITE, 14);
+        dateButton = button("", INK, SURFACE, 14);
+        timeButton = button("", INK, SURFACE, 14);
         dateButton.setOnClickListener(v -> chooseDate());
         timeButton.setOnClickListener(v -> chooseTime());
         LinearLayout.LayoutParams dateParams = new LinearLayout.LayoutParams(0, -2, 1.8f);
@@ -215,20 +220,29 @@ public final class QuickEntryDialog extends Dialog {
         LinearLayout bottom = vertical();
         bottom.setPadding(dp(20), dp(4), dp(20), dp(8));
         page.addView(bottom, new LinearLayout.LayoutParams(-1, -2));
-        errorView = text("", 13, Color.rgb(169, 48, 62), false);
+        View amountDivider = new View(activity);
+        amountDivider.setBackgroundColor(LINE);
+        bottom.addView(amountDivider, new LinearLayout.LayoutParams(-1, dp(1)));
+        TextView amountLabel = text("账目录入 · CNY", 12, MUTED, true);
+        amountLabel.setPadding(0, dp(12), 0, dp(8));
+        bottom.addView(amountLabel, new LinearLayout.LayoutParams(-1, -2));
+        errorView = text("", 13, BLUE, false);
         errorView.setPadding(0, dp(4), 0, dp(4));
         errorView.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         errorView.setVisibility(View.GONE);
         bottom.addView(errorView);
         LinearLayout amountRow = horizontal();
-        TextView currency = text("¥", 24, INK, false);
+        amountRow.setPadding(dp(12), 0, dp(4), 0);
+        amountRow.setBackground(surface(SURFACE, LINE, 6));
+        TextView currency = text("¥", 24, BLUE, false);
         currency.setPadding(0, 0, dp(8), 0);
         amountRow.addView(currency);
-        amountView = text("", 32, INK, true);
+        amountView = text("", 36, INK, true);
+        amountView.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         amountView.setSingleLine(true);
         amountView.setHorizontallyScrolling(false);
         amountView.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        amountView.setAutoSizeTextTypeUniformWithConfiguration(14, 32, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        amountView.setAutoSizeTextTypeUniformWithConfiguration(14, 36, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
         amountView.setOnClickListener(v -> hideTextKeyboard());
         formControls.add(amountView);
         amountRow.addView(amountView, new LinearLayout.LayoutParams(0, dp(48), 1));
@@ -237,12 +251,14 @@ public final class QuickEntryDialog extends Dialog {
         clear.setContentDescription("清空金额");
         clear.setOnClickListener(v -> { hideTextKeyboard(); changeAmount(""); });
         amountRow.addView(clear, new LinearLayout.LayoutParams(dp(64), dp(48)));
-        bottom.addView(amountRow, new LinearLayout.LayoutParams(-1, dp(48)));
+        bottom.addView(amountRow, new LinearLayout.LayoutParams(-1, dp(64)));
         refreshAmount();
         keypad = vertical();
-        bottom.addView(keypad, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams keypadParams = new LinearLayout.LayoutParams(-1, -2);
+        keypadParams.topMargin = dp(8);
+        bottom.addView(keypad, keypadParams);
         buildKeypad(keypad);
-        saveButton = button("保存账目", Color.WHITE, BLUE, 17);
+        saveButton = button("保存账目", BACKGROUND, BLUE, 17);
         compactButton(saveButton, 17);
         saveButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         saveButton.setOnClickListener(v -> save());
@@ -331,8 +347,8 @@ public final class QuickEntryDialog extends Dialog {
         for (int i = 0; i < DIRECTIONS.length; i++) {
             final String selectedDirection = DIRECTIONS[i];
             boolean selected = selectedDirection.equals(direction);
-            TextView choice = button(DIRECTION_LABELS[i], selected ? Color.WHITE : MUTED,
-                    selected ? INK : Color.WHITE, 15);
+            TextView choice = button(DIRECTION_LABELS[i], selected ? BACKGROUND : MUTED,
+                    selected ? BLUE : SURFACE, 15);
             compactButton(choice, 15);
             choice.setSelected(selected);
             choice.setContentDescription(DIRECTION_LABELS[i] + (selected ? "，已选择" : ""));
@@ -376,15 +392,15 @@ public final class QuickEntryDialog extends Dialog {
                 item.setGravity(Gravity.CENTER);
                 item.setPadding(dp(4), dp(10), dp(4), dp(9));
                 item.setMinimumHeight(dp(88));
-                item.setBackground(surface(selected ? PALE_BLUE : Color.TRANSPARENT, selected ? BLUE : Color.TRANSPARENT, 16));
+                item.setBackground(surface(selected ? PALE_BLUE : Color.TRANSPARENT, selected ? BLUE : Color.TRANSPARENT, 6));
                 item.setClickable(true);
                 item.setFocusable(true);
                 item.setSelected(selected);
                 item.setContentDescription(name + (selected ? "，已选择分类" : "，选择分类"));
-                View icon = LedgerUi.icon(activity, name, selected ? BLUE : MUTED, selected ? Color.WHITE : Color.rgb(235, 239, 246));
+                View icon = LedgerUi.icon(activity, name, selected ? BLUE : MUTED, selected ? PALE_BLUE : SURFACE);
                 icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
                 item.addView(icon, new LinearLayout.LayoutParams(dp(40), dp(40)));
-                TextView label = text(name, 13, selected ? BLUE : INK, selected);
+                TextView label = text(name, 13, INK, selected);
                 label.setGravity(Gravity.CENTER);
                 label.setMaxLines(2);
                 label.setEllipsize(TextUtils.TruncateAt.END);
@@ -401,14 +417,15 @@ public final class QuickEntryDialog extends Dialog {
 
     private void buildKeypad(LinearLayout content) {
         String[][] keys = {{"1", "2", "3"}, {"4", "5", "6"}, {"7", "8", "9"}, {".", "0", "⌫"}};
-        int height = dp(activity.getResources().getConfiguration().screenHeightDp < 700 ? 44 : 48);
+        int height = dp(48);
         int rowIndex = 0;
         for (String[] keyRow : keys) {
             LinearLayout row = horizontal();
             for (int column = 0; column < keyRow.length; column++) {
                 String key = keyRow[column];
-                TextView digit = button(key, INK, Color.WHITE, 23);
+                TextView digit = button(key, INK, SURFACE, 23);
                 compactButton(digit, 23);
+                digit.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL);
                 if ("⌫".equals(key)) digit.setContentDescription("删除最后一位金额");
                 else if (".".equals(key)) digit.setContentDescription("小数点");
                 digit.setOnClickListener(v -> enterKey(key));
@@ -473,7 +490,7 @@ public final class QuickEntryDialog extends Dialog {
     private void chooseDate() {
         if (saving) return;
         Calendar selected = calendar();
-        DatePickerDialog picker = new DatePickerDialog(activity, (view, year, month, day) -> {
+        DatePickerDialog picker = new DatePickerDialog(getContext(), (view, year, month, day) -> {
             if (saving) return;
             Calendar value = calendar();
             value.set(year, month, day);
@@ -489,7 +506,7 @@ public final class QuickEntryDialog extends Dialog {
     private void chooseTime() {
         if (saving) return;
         Calendar selected = calendar();
-        new TimePickerDialog(activity, (view, hour, minute) -> {
+        new TimePickerDialog(getContext(), (view, hour, minute) -> {
             if (saving) return;
             Calendar value = calendar();
             value.set(Calendar.HOUR_OF_DAY, hour);
@@ -572,7 +589,10 @@ public final class QuickEntryDialog extends Dialog {
     private void setSaving(boolean active) {
         saving = active;
         setCancelable(!active);
-        for (View control : formControls) control.setEnabled(!active);
+        for (View control : formControls) {
+            control.setEnabled(!active);
+            control.setAlpha(active ? 0.46f : 1f);
+        }
         if (saveButton != null) saveButton.setText(active ? "正在保存…" : "保存账目");
     }
 
@@ -592,7 +612,7 @@ public final class QuickEntryDialog extends Dialog {
     }
 
     private EditText field(String hint, String value, int limit, boolean multiline) {
-        EditText input = new EditText(activity);
+        EditText input = new EditText(getContext());
         input.setHint(hint);
         input.setContentDescription(hint);
         input.setText(value);
@@ -601,7 +621,14 @@ public final class QuickEntryDialog extends Dialog {
         input.setTextSize(15);
         input.setPadding(dp(16), dp(14), dp(16), dp(14));
         input.setMinHeight(dp(54));
-        input.setBackground(surface(Color.WHITE, Color.TRANSPARENT, 16));
+        input.setBackground(surface(SURFACE, LINE, 6));
+        input.setHighlightColor(Color.argb(90, 227, 91, 83));
+        if (Build.VERSION.SDK_INT >= 29) {
+            GradientDrawable cursor = new GradientDrawable();
+            cursor.setColor(BLUE);
+            cursor.setSize(dp(2), dp(24));
+            input.setTextCursorDrawable(cursor);
+        }
         input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limit)});
         input.setInputType(InputType.TYPE_CLASS_TEXT | (multiline ? InputType.TYPE_TEXT_FLAG_MULTI_LINE : InputType.TYPE_TEXT_FLAG_CAP_SENTENCES));
         input.setSingleLine(!multiline);
@@ -623,7 +650,7 @@ public final class QuickEntryDialog extends Dialog {
         button.setGravity(Gravity.CENTER);
         button.setPadding(dp(8), dp(12), dp(8), dp(12));
         button.setMinHeight(dp(48));
-        button.setBackground(surface(background, Color.TRANSPARENT, 16));
+        button.setBackground(surface(background, Color.TRANSPARENT, 6));
         button.setClickable(true);
         button.setFocusable(true);
         button.setAccessibilityDelegate(new View.AccessibilityDelegate() {
@@ -654,7 +681,7 @@ public final class QuickEntryDialog extends Dialog {
         GradientDrawable mask = new GradientDrawable();
         mask.setColor(Color.WHITE);
         mask.setCornerRadius(dp(radius));
-        return new RippleDrawable(ColorStateList.valueOf(Color.argb(28, 79, 99, 217)), fill, mask);
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(40, 227, 91, 83)), fill, mask);
     }
 
     private LinearLayout vertical() {

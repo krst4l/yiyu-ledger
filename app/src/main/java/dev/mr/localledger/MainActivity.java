@@ -22,6 +22,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.text.InputFilter;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
@@ -56,14 +57,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
-    private static final int INK = Color.rgb(29, 41, 66);
-    private static final int BLUE = Color.rgb(79, 99, 217);
-    private static final int MUTED = Color.rgb(116, 128, 149);
-    private static final int PAPER = Color.rgb(245, 247, 251);
-    private static final int TINT = Color.rgb(233, 237, 253);
-    private static final int LINE = Color.rgb(232, 236, 243);
-    private static final int EXPENSE_COLOR = Color.rgb(192, 83, 79);
-    private static final int CAUTION = Color.rgb(144, 87, 20);
+    private static final int INK = Color.rgb(241, 242, 236);
+    private static final int BLUE = Color.rgb(227, 91, 83);
+    private static final int MUTED = Color.rgb(154, 168, 158);
+    private static final int PAPER = Color.rgb(16, 20, 18);
+    private static final int SURFACE = Color.rgb(25, 32, 29);
+    private static final int TINT = Color.rgb(53, 35, 31);
+    private static final int LINE = Color.rgb(48, 58, 52);
+    private static final int EXPENSE_COLOR = BLUE;
+    private static final int CAUTION = Color.rgb(219, 183, 116);
     private static final int EXPORT_CSV = 71;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.CHINA);
@@ -123,8 +125,7 @@ public final class MainActivity extends Activity {
         getWindow().setNavigationBarColor(PAPER);
         if (android.os.Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         shell = vertical();
         shell.setBackgroundColor(PAPER);
         shell.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -202,7 +203,8 @@ public final class MainActivity extends Activity {
         render();
         if (ValueAnimator.areAnimatorsEnabled()) {
             content.setAlpha(0f);
-            content.animate().alpha(1f).setDuration(160).start();
+            content.setTranslationY(dp(7));
+            content.animate().alpha(1f).translationY(0f).setDuration(180).start();
         }
     }
     @Override public void onBackPressed() {
@@ -216,9 +218,12 @@ public final class MainActivity extends Activity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(22), dp(12), dp(16), dp(8));
         LinearLayout heading = vertical();
-        String title = recognitionOpen ? "自动记账" : reviewOpen ? "待核对" : new String[]{"日常账本", "账本日历", "收支分析", "我的账本"}[selectedTab];
+        String title = recognitionOpen ? "自动记账" : reviewOpen ? "待核对" : new String[]{"一隅记账", "账本日历", "收支分析", "我的账本"}[selectedTab];
         heading.addView(text(title, 23, INK, true));
-        heading.addView(text("Yiyu Ledger", 10, MUTED, false));
+        TextView subtitle = text("YIYU  /  PERSONAL LEDGER", 10, MUTED, false);
+        subtitle.setTypeface(Typeface.MONOSPACE);
+        subtitle.setLetterSpacing(.1f);
+        heading.addView(subtitle);
         header.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
         if (reviewOpen || recognitionOpen) {
             iconAction(header, "back", "返回", () -> { reviewOpen = false; recognitionOpen = false; render(); });
@@ -274,7 +279,7 @@ public final class MainActivity extends Activity {
         LinearLayout bottom = horizontal();
         bottom.setGravity(Gravity.CENTER_VERTICAL);
         bottom.setPadding(dp(10), dp(7), dp(10), dp(8));
-        bottom.setBackgroundColor(Color.WHITE);
+        bottom.setBackgroundColor(PAPER);
         String[] icons = {"home", "calendar", "plus", "chart", "user"};
         String[] labels = {"账本", "日历", "记一笔", "统计", "我的"};
         for (int i = 0; i < 5; i++) {
@@ -283,8 +288,8 @@ public final class MainActivity extends Activity {
             boolean active = i != 2 && !reviewOpen && !recognitionOpen && selectedTab == tab;
             LinearLayout item = vertical();
             item.setGravity(Gravity.CENTER);
-            item.setBackground(feedback(Color.TRANSPARENT, 14));
-            View icon = LedgerUi.icon(this, icons[i], i == 2 ? Color.WHITE : active ? BLUE : MUTED, i == 2 ? BLUE : Color.TRANSPARENT);
+            item.setBackground(feedback(Color.TRANSPARENT, 6));
+            View icon = LedgerUi.icon(this, icons[i], i == 2 ? PAPER : active ? BLUE : MUTED, i == 2 ? BLUE : Color.TRANSPARENT);
             item.addView(icon, new LinearLayout.LayoutParams(dp(i == 2 ? 44 : 26), dp(i == 2 ? 44 : 26)));
             if (i != 2) {
                 TextView label = text(labels[i], 10, active ? BLUE : MUTED, active);
@@ -351,23 +356,44 @@ public final class MainActivity extends Activity {
     private void renderHome(List<LedgerDb.Entry> entries, LedgerDb.Totals totals, int pending) {
         monthNavigation();
         LinearLayout summary = vertical();
-        summary.setBackground(shape(INK, 22));
-        summary.setPadding(dp(22), dp(23), dp(22), dp(20));
-        summary.addView(text("本月已确认支出 / CNY", 12, Color.rgb(185, 197, 222), false));
-        TextView spent = text("¥ " + money(totals.expenseFen), 40, Color.WHITE, true);
-        spent.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        summary.setBackground(TacticalVisuals.panel(this, true));
+        summary.setPadding(dp(18), dp(17), dp(18), dp(17));
+        LinearLayout headline = horizontal();
+        headline.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout spend = vertical();
+        spend.addView(text("本月已确认支出", 12, MUTED, false));
+        spacer(spend, 6);
+        TextView spent = text("¥ " + money(totals.expenseFen), 36, INK, true);
+        spent.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         spent.setMaxLines(1);
-        spent.setAutoSizeTextTypeUniformWithConfiguration(22, 40, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
-        summary.addView(spent, new LinearLayout.LayoutParams(-1, dp(64)));
-        spacer(summary, 18);
+        spent.setAutoSizeTextTypeUniformWithConfiguration(12, 36, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        spend.addView(spent, new LinearLayout.LayoutParams(-1, dp(56)));
+        LootCatalog.Match equivalent = LootCatalog.match(totals.expenseFen, uiPreferences);
+        if (equivalent != null) {
+            TextView loot = text(equivalent.format(), 12, BLUE, true);
+            loot.setMaxLines(2);
+            spend.addView(loot);
+            spend.addView(text("趣味折算 · 金额仍以人民币为准", 10, MUTED, false));
+        } else {
+            spend.addView(text("CNY  /  PERSONAL ACCOUNTS", 9, MUTED, false));
+        }
+        boolean compact = getResources().getConfiguration().screenWidthDp < 380
+                || getResources().getConfiguration().fontScale > 1.15f;
+        headline.addView(spend, new LinearLayout.LayoutParams(0, -2, 1));
+        headline.addView(TacticalVisuals.operator(this, uiPreferences.operatorStyle()),
+                new LinearLayout.LayoutParams(dp(compact ? 82 : 105), dp(compact ? 108 : 136)));
+        summary.addView(headline);
+        spacer(summary, 14);
+        rule(summary);
+        spacer(summary, 15);
         LinearLayout values = horizontal();
         darkMetric(values, "收入", totals.incomeFen);
         darkMetric(values, "退款", totals.refundFen);
         darkMetric(values, "结余", totals.incomeFen + totals.refundFen - totals.expenseFen);
         summary.addView(values);
-        spacer(summary, 18);
+        spacer(summary, 12);
         long budget = uiPreferences.monthlyBudget(selectedYear, selectedMonth);
-        TextView budgetLabel = text(budget > 0 ? "预算剩余  ¥ " + money(budget - totals.expenseFen) + "   ›" : "设置本月预算   ›", 12, Color.rgb(208, 218, 244), false);
+        TextView budgetLabel = text(budget > 0 ? "预算剩余  ¥ " + money(budget - totals.expenseFen) + "   ›" : "设置本月预算   ›", 12, MUTED, false);
         budgetLabel.setGravity(Gravity.CENTER_VERTICAL);
         budgetLabel.setMinHeight(dp(40));
         budgetLabel.setOnClickListener(v -> editBudget());
@@ -378,7 +404,7 @@ public final class MainActivity extends Activity {
         LinearLayout shortcut = horizontal();
         shortcut.setGravity(Gravity.CENTER_VERTICAL);
         shortcut.setPadding(dp(12), dp(7), dp(8), dp(7));
-        shortcut.setBackground(feedback(TINT, 14));
+        shortcut.setBackground(feedback(SURFACE, 6));
         shortcut.addView(LedgerUi.icon(this, "inbox", BLUE, Color.TRANSPARENT), new LinearLayout.LayoutParams(dp(28), dp(28)));
         LinearLayout copy = vertical();
         copy.setPadding(dp(10), 0, 0, 0);
@@ -396,9 +422,10 @@ public final class MainActivity extends Activity {
     }
     private void darkMetric(LinearLayout row, String label, long amount) {
         LinearLayout column = vertical();
-        column.addView(text(label, 11, Color.rgb(181, 194, 218), false));
+        column.addView(text(label, 11, MUTED, false));
         spacer(column, 6);
-        TextView value = text(money(amount), 16, Color.WHITE, true);
+        TextView value = text(money(amount), 16, INK, true);
+        value.setTypeface(Typeface.MONOSPACE);
         value.setMaxLines(1);
         value.setAutoSizeTextTypeUniformWithConfiguration(10, 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
         column.addView(value);
@@ -419,7 +446,7 @@ public final class MainActivity extends Activity {
         spacer(content, 22);
         LinearLayout calendar = vertical();
         calendar.setPadding(dp(8), dp(12), dp(8), dp(12));
-        calendar.setBackground(shape(Color.WHITE, 18));
+        calendar.setBackground(shape(SURFACE, 6));
         LinearLayout weekdays = horizontal();
         for (String day : new String[]{"一", "二", "三", "四", "五", "六", "日"}) {
             TextView label = text(day, 11, MUTED, false); label.setGravity(Gravity.CENTER);
@@ -436,13 +463,13 @@ public final class MainActivity extends Activity {
                 if (day >= 1 && day <= length) {
                     LedgerDb.DayTotal value = days.get(day - 1);
                     boolean selected = day == selectedDay;
-                    tile.setBackground(feedback(selected ? BLUE : Color.TRANSPARENT, 12));
-                    TextView dayNumber = text(Integer.toString(day), 16, selected ? Color.WHITE : INK, selected);
+                    tile.setBackground(feedback(selected ? BLUE : Color.TRANSPARENT, 4));
+                    TextView dayNumber = text(Integer.toString(day), 16, selected ? PAPER : INK, selected);
                     dayNumber.setGravity(Gravity.CENTER);
                     tile.addView(dayNumber);
                     spacer(tile, 5);
                     String amount = value.expenseFen > 0 ? "−" + shortMoney(value.expenseFen) : value.incomeFen > 0 ? "+" + shortMoney(value.incomeFen) : "·";
-                    TextView detail = text(amount, 9, selected ? Color.WHITE : value.expenseFen > 0 ? EXPENSE_COLOR : MUTED, false);
+                    TextView detail = text(amount, 9, selected ? PAPER : value.expenseFen > 0 ? EXPENSE_COLOR : MUTED, false);
                     detail.setMaxLines(1);
                     detail.setGravity(Gravity.CENTER);
                     tile.addView(detail);
@@ -532,8 +559,11 @@ public final class MainActivity extends Activity {
     private void addEntry(LinearLayout target, LedgerDb.Entry entry) {
         LinearLayout row = horizontal();
         row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(12), dp(15), dp(12), dp(15));
-        row.setBackground(feedback(Color.WHITE, 12));
-        row.addView(LedgerUi.icon(this, entry.category, BLUE, TINT), new LinearLayout.LayoutParams(dp(42), dp(42)));
+        row.setBackground(feedback(SURFACE, 4));
+        LootCatalog.Match equivalent = "expense".equals(entry.direction) ? LootCatalog.match(entry.amountFen, uiPreferences) : null;
+        View symbol = equivalent == null ? LedgerUi.icon(this, entry.category, BLUE, TINT)
+                : TacticalVisuals.loot(this, equivalent.item.kind);
+        row.addView(symbol, new LinearLayout.LayoutParams(dp(42), dp(42)));
         String merchant = entry.merchant == null || entry.merchant.trim().isEmpty() ? entry.sourceLabel : entry.merchant;
         LinearLayout description = vertical(); description.setPadding(dp(12), 0, dp(8), 0);
         TextView name = text(merchant, 14, INK, true); name.setMaxLines(2); description.addView(name);
@@ -548,12 +578,23 @@ public final class MainActivity extends Activity {
         }
         row.addView(description, new LinearLayout.LayoutParams(0, -2, 1));
         String sign = "expense".equals(entry.direction) ? "−" : "transfer".equals(entry.direction) ? "↔" : "+";
-        TextView amount = text(sign + money(entry.amountFen), 17, "expense".equals(entry.direction) ? EXPENSE_COLOR : BLUE, true);
-        amount.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        TextView amount = text(sign + money(entry.amountFen), 17, "expense".equals(entry.direction) ? EXPENSE_COLOR : INK, true);
+        amount.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         amount.setMaxLines(1);
         amount.setGravity(Gravity.END);
         amount.setAutoSizeTextTypeUniformWithConfiguration(10, 17, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
-        row.addView(amount, new LinearLayout.LayoutParams(dp(126), dp(36)));
+        LinearLayout amounts = vertical();
+        amounts.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        amounts.addView(amount, new LinearLayout.LayoutParams(-1, dp(30)));
+        if (equivalent != null) {
+            TextView comparison = text(equivalent.format(), 10, MUTED, false);
+            comparison.setGravity(Gravity.END);
+            comparison.setMaxLines(2);
+            comparison.setEllipsize(TextUtils.TruncateAt.END);
+            comparison.setContentDescription("趣味折算，" + equivalent.format());
+            amounts.addView(comparison, new LinearLayout.LayoutParams(-1, -2));
+        }
+        row.addView(amounts, new LinearLayout.LayoutParams(dp(126), -2));
         row.setOnClickListener(v -> showEntry(entry, merchant));
         target.addView(row); spacer(target, 2);
     }
@@ -566,10 +607,10 @@ public final class MainActivity extends Activity {
     }
     private void emptyState(LinearLayout target, String title, String message, String actionLabel, Runnable action) {
         LinearLayout empty = vertical(); empty.setGravity(Gravity.CENTER); empty.setPadding(dp(14), dp(36), dp(14), dp(28));
-        empty.addView(LedgerUi.icon(this, "edit", BLUE, TINT), new LinearLayout.LayoutParams(dp(64), dp(64)));
+        empty.addView(TacticalVisuals.loot(this), new LinearLayout.LayoutParams(dp(82), dp(72)));
         spacer(empty, 20); empty.addView(text(title, 18, INK, true));
         TextView caption = text(message, 12, MUTED, false); caption.setGravity(Gravity.CENTER); caption.setPadding(0, dp(8), 0, dp(18)); empty.addView(caption);
-        Button add = button(actionLabel, false); add.setBackground(feedback(TINT, 10)); add.setOnClickListener(v -> action.run()); empty.addView(add, new LinearLayout.LayoutParams(dp(150), dp(48)));
+        Button add = button(actionLabel, false); add.setTextColor(INK); add.setBackground(feedback(TINT, 10)); add.setOnClickListener(v -> action.run()); empty.addView(add, new LinearLayout.LayoutParams(dp(150), dp(48)));
         target.addView(empty, new LinearLayout.LayoutParams(-1, -2));
     }
     private String shortMoney(long fen) {
@@ -581,6 +622,10 @@ public final class MainActivity extends Activity {
         String message = directionName(entry.direction) + " · " + entry.category + "\n交易日期：" + date
                 + "\n来源：" + entry.sourceLabel + "\n采集时间：" + (entry.capturedAt > 0 ? fullTimeFormat.format(new Date(entry.capturedAt)) : "旧版本未记录")
                 + "\n核对提示：" + entry.reason;
+        LootCatalog.Match equivalent = "expense".equals(entry.direction) ? LootCatalog.match(entry.amountFen, uiPreferences) : null;
+        if (equivalent != null) message += "\n\n趣味折算：" + equivalent.format()
+                + "\n当前设定：¥" + money(equivalent.referenceFen) + " / 1" + equivalent.item.unit + equivalent.item.name
+                + "\n仅为个人参考，不是游戏交易价格。";
         if (entry.note != null && !entry.note.isEmpty()) message += "\n备注：" + entry.note;
         AlertDialog.Builder detail = new AlertDialog.Builder(this).setTitle(merchant + "  ¥ " + money(entry.amountFen)).setMessage(message);
         if (entry.needsTimeConfirmation) {
@@ -595,8 +640,9 @@ public final class MainActivity extends Activity {
     }
     private void renderProfile() {
         LinearLayout identity = horizontal(); identity.setGravity(Gravity.CENTER_VERTICAL);
-        identity.setPadding(dp(16), dp(22), dp(16), dp(24));
-        identity.addView(LedgerUi.icon(this, "user", BLUE, TINT), new LinearLayout.LayoutParams(dp(64), dp(64)));
+        identity.setPadding(dp(12), dp(12), dp(12), dp(12));
+        identity.setBackground(TacticalVisuals.panel(this, false));
+        identity.addView(TacticalVisuals.operator(this, uiPreferences.operatorStyle()), new LinearLayout.LayoutParams(dp(80), dp(104)));
         LinearLayout label = vertical(); label.setPadding(dp(16), 0, 0, 0);
         label.addView(text("一隅记账", 21, INK, true));
         label.addView(text("无需账号 · 数据保存在本机", 11, MUTED, false));
@@ -608,6 +654,13 @@ public final class MainActivity extends Activity {
         profileShortcut(tools, "other", "分类管理", this::manageCategories);
         content.addView(tools);
         spacer(content, 22);
+        sectionHeading("战利品等价", "趣味展示", null);
+        settingRow("消费金额换成藏品", "真实人民币旁显示近似物品数量", uiPreferences.lootEnabled() ? "已开启" : "已关闭",
+                () -> { uiPreferences.setLootEnabled(!uiPreferences.lootEnabled()); render(); });
+        settingRow("物品对照与参考金额", LootCatalog.items().size() + " 项参考藏品 · " + LootCatalog.configuredCount(uiPreferences) + " 项已设金额", "设置", this::showLootReferences);
+        String[] outfits = {"侦察员", "支援员", "工程师"};
+        settingRow("Q 版伙伴", outfits[uiPreferences.operatorStyle()] + " · 原创装扮", "切换", this::chooseOperator);
+        spacer(content, 18);
         sectionHeading("自动记账", "", null);
         settingRow("识别状态", captureStatus(), "查看", this::openRecognition);
         settingRow("待核对记录", "核对金额、交易日期与重复关系", "打开", () -> { reviewOpen = true; render(); });
@@ -616,18 +669,95 @@ public final class MainActivity extends Activity {
         settingRow("导出账本", "导出全部可见记录为 CSV", "导出", this::exportCsv);
         settingRow("隐私说明", "本机处理、权限范围与数据保留", "阅读", this::showPrivacy);
         spacer(content, 18);
-        settingRow("一隅记账 0.3.0", "MIT 开源 · 实验版本", "许可", this::showLicense);
+        settingRow("一隅记账 0.4.0", "MIT 开源 · 实验版本", "许可", this::showLicense);
         paragraph(content, "CSV 未加密，当前无法导入恢复。卸载或清除数据会丢失账本。", 11);
     }
     private void profileShortcut(LinearLayout row, String icon, String name, Runnable action) {
         LinearLayout item = vertical(); item.setGravity(Gravity.CENTER); item.setPadding(0, dp(16), 0, dp(14));
-        item.setBackground(feedback(Color.WHITE, 14));
+        item.setBackground(feedback(SURFACE, 6));
         item.addView(LedgerUi.icon(this, icon, BLUE, TINT), new LinearLayout.LayoutParams(dp(42), dp(42)));
         spacer(item, 10); item.addView(text(name, 12, INK, true)); item.setOnClickListener(v -> action.run());
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1); params.setMargins(dp(3), 0, dp(3), 0);
         row.addView(item, params);
     }
     private void openRecognition() { recognitionOpen = true; reviewOpen = false; render(); }
+    private void chooseOperator() {
+        LinearLayout options = vertical();
+        options.setPadding(dp(16), dp(8), dp(16), dp(8));
+        AlertDialog chooser = new AlertDialog.Builder(this).setTitle("选择 Q 版伙伴").setView(options)
+                .setNegativeButton("返回", null).create();
+        String[] names = {"侦察员", "支援员", "工程师"};
+        for (int i = 0; i < names.length; i++) {
+            final int variant = i;
+            LinearLayout row = horizontal();
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setBackground(feedback(variant == uiPreferences.operatorStyle() ? SURFACE : Color.TRANSPARENT, 6));
+            row.addView(TacticalVisuals.operator(this, variant), new LinearLayout.LayoutParams(dp(68), dp(82)));
+            row.addView(text(names[i], 16, INK, true), new LinearLayout.LayoutParams(0, -2, 1));
+            row.addView(text(variant == uiPreferences.operatorStyle() ? "已选" : "选择", 12, BLUE, false));
+            row.setContentDescription(names[i] + (variant == uiPreferences.operatorStyle() ? "，已选中" : ""));
+            row.setOnClickListener(v -> { uiPreferences.setOperatorStyle(variant); chooser.dismiss(); render(); });
+            options.addView(row, new LinearLayout.LayoutParams(-1, -2));
+        }
+        chooser.show();
+    }
+    private void showLootReferences() {
+        LinearLayout list = vertical();
+        list.setPadding(dp(20), dp(8), dp(20), dp(16));
+        paragraph(list, "仅用于消费金额的趣味比喻。参考金额由你逐件设定，互不联动，不是人民币与游戏币的汇率；修改不影响账本金额与统计。", 12);
+        paragraph(list, "收录 " + LootCatalog.items().size() + " 项资料快照（" + LootCatalog.SOURCE_DATE
+                + "），不是当前完整清单。默认按怀表 ¥20 的趣味比例设置；没有历史估值的物品需手动设金额。", 11);
+        spacer(list, 14);
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(list);
+        AlertDialog referenceList = new AlertDialog.Builder(this).setTitle("战利品参考 · " + LootCatalog.items().size() + " 项").setView(scroll)
+                .setPositiveButton("完成", null).create();
+        for (LootCatalog.Item item : LootCatalog.items()) {
+            LinearLayout row = horizontal();
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(0, dp(10), 0, dp(10));
+            row.addView(TacticalVisuals.loot(this, item.kind), new LinearLayout.LayoutParams(dp(42), dp(42)));
+            LinearLayout copy = vertical();
+            copy.setPadding(dp(12), 0, dp(8), 0);
+            copy.addView(text(item.name, 14, INK, true));
+            long reference = uiPreferences.lootReferenceFen(item.id, item.defaultFen);
+            copy.addView(text(reference > 0 ? "¥ " + money(reference) + " / 1" + item.unit : "未设参考金额 · 暂不参与折算", 12, MUTED, false));
+            row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
+            Button edit = button("调整", false);
+            edit.setContentDescription("调整" + item.name + "的趣味参考金额");
+            row.addView(edit, new LinearLayout.LayoutParams(dp(56), dp(48)));
+            list.addView(row);
+            rule(list);
+            edit.setOnClickListener(v -> { referenceList.dismiss(); editLootReference(item); });
+        }
+        referenceList.show();
+    }
+    private void editLootReference(LootCatalog.Item item) {
+        LinearLayout form = vertical();
+        form.setPadding(dp(24), dp(12), dp(24), 0);
+        form.addView(text("1" + item.unit + item.name + " 对应多少人民币？", 14, INK, false));
+        EditText value = new EditText(this);
+        value.setHint("大于 0 的参考金额（元）");
+        value.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        value.setFilters(new InputFilter[]{new InputFilter.LengthFilter(12)});
+        long current = uiPreferences.lootReferenceFen(item.id, item.defaultFen);
+        if (current > 0) value.setText(money(current));
+        value.selectAll();
+        form.addView(value);
+        AlertDialog editor = new AlertDialog.Builder(this).setTitle("调整趣味参考金额").setView(form)
+                .setPositiveButton("保存", null).setNegativeButton("取消", null).create();
+        editor.setOnShowListener(dialog -> editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            try {
+                String number = value.getText().toString().trim();
+                if (!number.matches("[0-9]{1,9}(?:\\.[0-9]{1,2})?")) throw new IllegalArgumentException();
+                uiPreferences.setLootReferenceFen(item.id, new BigDecimal(number).movePointRight(2).longValueExact());
+                editor.dismiss(); render();
+                toast("已更新" + item.name + "的趣味参考金额");
+                showLootReferences();
+            } catch (RuntimeException invalid) { value.setError("请输入大于 0 的有效金额，最多两位小数"); }
+        }));
+        editor.show();
+    }
     private void editBudget() {
         LinearLayout form = vertical(); form.setPadding(dp(24), dp(12), dp(24), 0);
         form.addView(text(selectedYear + " 年 " + selectedMonth + " 月支出预算", 13, MUTED, false));
@@ -1041,7 +1171,7 @@ public final class MainActivity extends Activity {
         LinearLayout copy = vertical(); copy.setPadding(0, 0, dp(12), 0); copy.addView(text(title, 15, INK, true));
         spacer(copy, 6); copy.addView(text(description, 12, MUTED, false));
         row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
-        Button button = button(actionLabel, false); button.setTextSize(13); button.setBackground(feedback(TINT, 6));
+        Button button = button(actionLabel, false); button.setTextSize(13); button.setTextColor(INK); button.setBackground(feedback(TINT, 6));
         button.setContentDescription(title + "，" + actionLabel); button.setOnClickListener(v -> action.run());
         row.addView(button, new LinearLayout.LayoutParams(dp(64), dp(48))); content.addView(row); rule(content);
     }
@@ -1063,7 +1193,7 @@ public final class MainActivity extends Activity {
     private GradientDrawable shape(int color, int radius) {
         GradientDrawable drawable = new GradientDrawable(); drawable.setColor(color); drawable.setCornerRadius(dp(radius)); return drawable;
     }
-    private RippleDrawable feedback(int color, int radius) { return new RippleDrawable(ColorStateList.valueOf(0x18304FEB), shape(color, radius), shape(Color.WHITE, radius)); }
+    private RippleDrawable feedback(int color, int radius) { return new RippleDrawable(ColorStateList.valueOf(0x33E35B53), shape(color, Math.min(radius, 6)), shape(Color.WHITE, Math.min(radius, 6))); }
     private void rule(LinearLayout parent) {
         View rule = new View(this); rule.setBackgroundColor(LINE); parent.addView(rule, new LinearLayout.LayoutParams(-1, dp(1)));
     }
