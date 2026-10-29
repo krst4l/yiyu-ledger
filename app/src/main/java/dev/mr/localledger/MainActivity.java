@@ -5,8 +5,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
-import android.accessibilityservice.AccessibilityServiceInfo;
-import android.content.ComponentName;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
@@ -19,14 +19,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
-import android.view.accessibility.AccessibilityManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -87,7 +85,7 @@ public final class MainActivity extends Activity {
     private int selectedMonth = Calendar.getInstance().get(Calendar.MONTH) + 1;
     private int selectedDay = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
     private int visibleLimit = 100;
-    private boolean reviewOpen, recognitionOpen, chartIncome;
+    private boolean reviewOpen, recognitionOpen, compatibilityOpen, chartIncome;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -101,6 +99,7 @@ public final class MainActivity extends Activity {
             selectedDay = state.getInt("day", selectedDay);
             reviewOpen = state.getBoolean("review");
             recognitionOpen = state.getBoolean("recognition");
+            compatibilityOpen = recognitionOpen && state.getBoolean("compatibility");
             chartIncome = state.getBoolean("chart_income");
         }
         if (state != null) {
@@ -130,7 +129,8 @@ public final class MainActivity extends Activity {
         shell.setBackgroundColor(PAPER);
         shell.setOnApplyWindowInsetsListener((v, insets) -> {
             if (android.os.Build.VERSION.SDK_INT >= 30) {
-                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars()
+                        | WindowInsets.Type.displayCutout());
                 v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
             } else {
                 v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
@@ -169,6 +169,7 @@ public final class MainActivity extends Activity {
         out.putInt("tab", selectedTab);
         out.putInt("year", selectedYear); out.putInt("month", selectedMonth); out.putInt("day", selectedDay);
         out.putBoolean("review", reviewOpen); out.putBoolean("recognition", recognitionOpen); out.putBoolean("chart_income", chartIncome);
+        out.putBoolean("compatibility", compatibilityOpen);
         if (activeSave != null) {
             out.putString("save_operation_id", activeSave.id);
             out.putBundle("save_operation_draft", new Bundle(activeSave.draft));
@@ -208,8 +209,13 @@ public final class MainActivity extends Activity {
         }
     }
     @Override public void onBackPressed() {
-        if (reviewOpen || recognitionOpen) { reviewOpen = false; recognitionOpen = false; render(); }
+        if (reviewOpen || recognitionOpen) returnToParent();
         else super.onBackPressed();
+    }
+    private void returnToParent() {
+        if (compatibilityOpen) compatibilityOpen = false;
+        else { reviewOpen = false; recognitionOpen = false; }
+        render();
     }
     private void render() {
         int token = ++generation;
@@ -218,7 +224,7 @@ public final class MainActivity extends Activity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(22), dp(12), dp(16), dp(8));
         LinearLayout heading = vertical();
-        String title = recognitionOpen ? "自动记账" : reviewOpen ? "待核对" : new String[]{"粥粥记账", "账本日历", "收支分析", "我的账本"}[selectedTab];
+        String title = compatibilityOpen ? "机型与后台设置" : recognitionOpen ? "自动记账" : reviewOpen ? "待核对" : new String[]{"粥粥记账", "账本日历", "收支分析", "我的账本"}[selectedTab];
         heading.addView(text(title, 23, INK, true));
         TextView subtitle = text("ZHOUZHOU  /  PERSONAL LEDGER", 10, MUTED, false);
         subtitle.setTypeface(Typeface.MONOSPACE);
@@ -226,7 +232,7 @@ public final class MainActivity extends Activity {
         heading.addView(subtitle);
         header.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
         if (reviewOpen || recognitionOpen) {
-            iconAction(header, "back", "返回", () -> { reviewOpen = false; recognitionOpen = false; render(); });
+            iconAction(header, "back", "返回", this::returnToParent);
         } else {
             iconAction(header, "search", "搜索账目", this::searchEntries);
             iconAction(header, "inbox", "打开待核对", () -> { reviewOpen = true; render(); });
@@ -246,7 +252,10 @@ public final class MainActivity extends Activity {
         scroll.addView(content);
         shell.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         renderNavigation();
-        if (recognitionOpen) { renderSettings(); return; }
+        if (recognitionOpen) {
+            if (compatibilityOpen) renderCompatibility(); else renderSettings();
+            return;
+        }
         if (selectedTab == 3 && !reviewOpen) { renderProfile(); return; }
         content.addView(text("正在读取账本…", 14, MUTED, false));
         final int year = selectedYear, month = selectedMonth, tab = selectedTab;
@@ -300,7 +309,7 @@ public final class MainActivity extends Activity {
             item.setContentDescription(labels[i] + (active ? "，已选中" : ""));
             item.setOnClickListener(v -> {
                 if (position == 2) { editEntry(null); return; }
-                reviewOpen = false; recognitionOpen = false;
+                reviewOpen = false; recognitionOpen = false; compatibilityOpen = false;
                 selectTab(position < 2 ? position : position - 1);
             });
             bottom.addView(item, new LinearLayout.LayoutParams(0, dp(58), 1));
@@ -680,7 +689,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1); params.setMargins(dp(3), 0, dp(3), 0);
         row.addView(item, params);
     }
-    private void openRecognition() { recognitionOpen = true; reviewOpen = false; render(); }
+    private void openRecognition() { recognitionOpen = true; reviewOpen = false; compatibilityOpen = false; render(); }
     private void chooseOperator() {
         LinearLayout options = vertical();
         options.setPadding(dp(12), dp(8), dp(12), dp(8));
@@ -844,17 +853,17 @@ public final class MainActivity extends Activity {
         paragraph(content, "授权后尝试识别支付通知和付款页面。请与实际交易核对。", 13);
         sectionLabel("01", "识别与权限");
         settingRow("自动识别", captureStatus(), settings.isCaptureEnabled() ? "暂停" : "开启", this::toggleCapture);
-        settingRow("通知使用权", notificationAccess() ? "系统已授权；总开关开启后才处理选定来源。" : "尚未授权。读取选定来源的明确交易通知。", "设置",
-                () -> openSettings(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        settingRow("通知使用权", DeviceCompatibility.notificationStatus(this) + "；总开关开启后才处理选定来源的交易通知。", "设置",
+                this::openNotificationSettings);
         String pageStatus = !settings.isAccessibilityCaptureEnabled() ? "页面识别已关闭，可单独选择开启。"
-                : accessibilityAccess() ? "系统已授权；付款页候选先进入待核对。" : "已同意页面识别，尚待系统授权。";
+                : DeviceCompatibility.accessibilityStatus(this) + "；付款页候选先进入待核对。";
         settingRow("付款页面识别", pageStatus, "设置", this::configurePages);
         paragraph(content, "受保护页面、没有金额的通知、应用更新和系统后台限制都可能导致漏记。购物订单不等于付款。", 12);
         sectionLabel("02", "识别来源");
         settingRow("来源白名单", "当前选择 " + settings.getEnabledPackages().size() + " 个应用；默认只选微信和支付宝。", "选择", this::chooseSources);
         paragraph(content, "付款页规则仅用于微信、支付宝、云闪付及四个电商平台。银行和新增来源只尝试通知规则。电商、银行、付款页及关系不明的转账先待核对，尚未完成实机适配。", 12);
-        settingRow("后台运行", "识别依赖系统授予的服务权限与后台运行条件。", "查看",
-                () -> openSettings(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))));
+        settingRow("机型与后台设置", DeviceCompatibility.deviceSummary() + " · 查看本机权限、后台运行建议与兼容性信息。", "查看",
+                () -> { compatibilityOpen = true; render(); });
         long issues = settings.getCaptureIssueCount();
         if (issues > 0) {
             String issue = switch (settings.getLastCaptureIssueCode()) {
@@ -874,6 +883,56 @@ public final class MainActivity extends Activity {
                 .setPositiveButton("知道了", null).show());
         action(content, "清除诊断记录", false, () -> { settings.clearCaptureDiagnostics(); render(); });
     }
+    private void renderCompatibility() {
+        paragraph(content, DeviceCompatibility.deviceSummary(), 16);
+        paragraph(content, "系统、支付应用版本和付款页面都会影响识别效果。这里的授权状态不代表服务正在运行或交易已识别。", 12);
+        sectionLabel("01", "本机设置");
+        settingRow("通知使用权", DeviceCompatibility.notificationStatus(this) + "。需开启自动识别、选择来源，并允许支付应用发送交易通知。", "设置",
+                this::openNotificationSettings);
+        settingRow("付款页面识别", !settings.isAccessibilityCaptureEnabled() ? "应用内尚未开启。需先同意，再手动授予系统无障碍权限。"
+                : DeviceCompatibility.accessibilityStatus(this) + "；页面仍可能不提供可读取的文字。", "设置", this::configurePages);
+        settingRow("电池优化", DeviceCompatibility.batteryStatus(this) + "。厂商的自启动和后台管理需另行查看。", "查看",
+                () -> { if (!DeviceCompatibility.openBatterySettings(this)) showManualSettingsHint(); });
+        settingRow("应用信息", "查看电量、后台活动、自启动或受限制的设置；选项名称因系统而异。", "打开",
+                () -> { if (!DeviceCompatibility.openAppSettings(this)) showManualSettingsHint(); });
+        sectionLabel("02", "后台运行建议");
+        paragraph(content, DeviceCompatibility.backgroundGuidance(), 13);
+        paragraph(content, "一键清理、强行停止或系统省电策略可能中断识别。重新打开账本后检查权限；不要通过卸载或清除数据排查，以免丢失账目。", 12);
+        sectionLabel("03", "反馈兼容性");
+        paragraph(content, "请分别记录手机系统、支付应用版本，以及通知识别和付款页识别的结果。微信历史付款页目前仍有未解决的兼容问题。", 12);
+        paragraph(content, "可预览并复制机型、版本和权限状态，不包含账目、账号、设备序列号或页面正文。由你决定是否粘贴到 GitHub 的机型兼容反馈中。", 12);
+        action(content, "查看并复制兼容性信息", false, this::showCompatibilityReport);
+        action(content, "打开 GitHub 机型反馈表", false, () -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(
+                        "https://github.com/krst4l/yiyu-ledger/issues/new?template=device-compatibility.yml")));
+            } catch (RuntimeException error) { toast("未找到浏览器，请在项目 GitHub Issues 中选择机型兼容性反馈"); }
+        });
+    }
+    private void showCompatibilityReport() {
+        String report = DeviceCompatibility.createReport(this, settings);
+        TextView preview = text(report, 12, INK, false);
+        preview.setTextIsSelectable(true);
+        preview.setPadding(dp(20), dp(12), dp(20), dp(12));
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(preview);
+        new AlertDialog.Builder(this).setTitle("兼容性信息").setView(scroll)
+                .setPositiveButton("复制", (dialog, which) -> {
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (clipboard == null) { toast("无法访问系统剪贴板"); return; }
+                    try {
+                        clipboard.setPrimaryClip(ClipData.newPlainText("粥粥记账兼容性信息", report));
+                        toast("已复制兼容性信息，可自行粘贴反馈");
+                    } catch (RuntimeException error) { toast("复制未完成，请在预览中选择文字复制"); }
+                }).setNegativeButton("返回", null).show();
+    }
+    private void openNotificationSettings() {
+        if (!DeviceCompatibility.openNotificationSettings(this)) showManualSettingsHint();
+    }
+    private void openPageSettings() {
+        if (!DeviceCompatibility.openAccessibilitySettings(this)) showManualSettingsHint();
+    }
+    private void showManualSettingsHint() { toast("请在系统设置中搜索粥粥记账，手动查看对应权限"); }
     private void renderDiagnostic(String title, AppSettings.CaptureDiagnostic info) {
         spacer(content, 16);
         content.addView(text(title + " · " + AppSettings.describeDiagnosticStage(info.stage), 15, INK, true));
@@ -917,7 +976,7 @@ public final class MainActivity extends Activity {
         if (!settings.isCaptureEnabled()) return "自动识别已暂停";
         boolean notifications = notificationAccess();
         boolean pages = settings.isAccessibilityCaptureEnabled() && accessibilityAccess();
-        if (!notifications && !pages) return "已开启总开关，仍需系统授权";
+        if (!notifications && !pages) return "已开启总开关，请检查系统授权状态";
         return "自动识别已开启 · " + (notifications && pages ? "通知与付款页" : notifications ? "通知" : "付款页");
     }
     private void toggleCapture() {
@@ -930,7 +989,7 @@ public final class MainActivity extends Activity {
         if (settings.isAccessibilityCaptureEnabled()) {
             new AlertDialog.Builder(this).setTitle("付款页面识别")
                     .setItems(new String[]{"打开系统无障碍设置", "关闭页面识别"}, (d, w) -> {
-                        if (w == 0) openSettings(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                        if (w == 0) openPageSettings();
                         else { settings.setAccessibilityCaptureEnabled(false); render(); }
                     }).setNegativeButton("返回", null).show();
             return;
@@ -938,7 +997,7 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("使用付款页面文字")
                 .setMessage("需在系统无障碍设置中手动开启“粥粥记账 · 付款页面识别”。开启后，仅从你选定来源的可访问页面提取付款状态、金额和日期等文字。\n\n不自动点击、输入、付款或截屏；不上传，不保存整段页面原文。遇到密码或可编辑内容、过大页面时放弃解析。可随时在应用内或系统中关闭。\n\n页面候选会进入待核对；未能识别交易日期时，必须由你确认日期和时间。侧载应用如遇授权限制，可在系统应用详情查看“允许受限制的设置”。")
                 .setPositiveButton("同意，去授权", (d, w) -> {
-                    settings.setAccessibilityCaptureEnabled(true); openSettings(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                    settings.setAccessibilityCaptureEnabled(true); openPageSettings();
                 }).setNegativeButton("取消", null).show();
     }
     private void chooseSources() {
@@ -1147,21 +1206,10 @@ public final class MainActivity extends Activity {
         });
     }
     private boolean notificationAccess() {
-        String enabled = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        if (enabled == null) return false;
-        ComponentName component = new ComponentName(this, LedgerNotificationService.class);
-        for (String flattened : enabled.split(":")) if (component.equals(ComponentName.unflattenFromString(flattened))) return true;
-        return false;
+        return DeviceCompatibility.notificationAccess(this);
     }
     private boolean accessibilityAccess() {
-        AccessibilityManager manager = (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
-        if (manager == null) return false;
-        for (AccessibilityServiceInfo service : manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)) {
-            ResolveInfo info = service.getResolveInfo();
-            if (info != null && info.serviceInfo != null && getPackageName().equals(info.serviceInfo.packageName)
-                    && PaymentAccessibilityService.class.getName().equals(info.serviceInfo.name)) return true;
-        }
-        return false;
+        return DeviceCompatibility.accessibilityAccess(this);
     }
     private void confirmDelete(long id) {
         new AlertDialog.Builder(this).setTitle("删除这条记录？").setMessage("将清空这条记录的明细，保留最少去重摘要。删除后无法撤销。")
@@ -1174,9 +1222,6 @@ public final class MainActivity extends Activity {
         });
     }
     private void showFailure(String message) { runOnUiThread(() -> { if (!isDestroyed()) toast(message); }); }
-    private void openSettings(Intent intent) {
-        try { startActivity(intent); } catch (RuntimeException error) { toast("请在系统设置中手动开启对应权限"); }
-    }
     private void sectionLabel(String number, String title) {
         spacer(content, 32); content.addView(text(number + "  /  " + title, 12, BLUE, true)); spacer(content, 12); rule(content);
     }
@@ -1187,10 +1232,10 @@ public final class MainActivity extends Activity {
         row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
         Button button = button(actionLabel, false); button.setTextSize(13); button.setTextColor(INK); button.setBackground(feedback(TINT, 6));
         button.setContentDescription(title + "，" + actionLabel); button.setOnClickListener(v -> action.run());
-        row.addView(button, new LinearLayout.LayoutParams(dp(64), dp(48))); content.addView(row); rule(content);
+        row.addView(button, new LinearLayout.LayoutParams(dp(64), -2)); content.addView(row); rule(content);
     }
     private void action(LinearLayout parent, String title, boolean primary, Runnable action) {
-        Button button = button(title, primary); button.setOnClickListener(v -> action.run()); parent.addView(button, new LinearLayout.LayoutParams(-1, dp(48)));
+        Button button = button(title, primary); button.setOnClickListener(v -> action.run()); parent.addView(button, new LinearLayout.LayoutParams(-1, -2));
     }
     private Button button(String label, boolean primary) {
         Button button = new Button(this); button.setText(label); button.setTextSize(14); button.setAllCaps(false);

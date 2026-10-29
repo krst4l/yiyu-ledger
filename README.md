@@ -22,6 +22,8 @@
 
 后台清理可能中断识别服务；系统权限被关闭后，需要手动重新开启。自动识别仍在适配中，可能漏记、误记或重复，请以支付平台和银行记录核账。
 
+不同品牌的权限与后台入口见 [安卓机型适配指南](docs/android-compatibility.md)。应用内“我的 → 自动记账 → 机型与后台设置”提供设置入口、操作提示和可手动复制的兼容性信息。
+
 ## 自动识别现状
 
 | 来源 | 当前情况 |
@@ -31,7 +33,7 @@
 | 微信付款通知 | 已有规则，尚无真实付款通知验证样本 |
 | 淘宝“等待确认收货”及其他银行、电商来源 | 尚未完成实机适配验证；选择来源不代表已支持 |
 
-排错记录见 [设备记录](docs/device-validation.md)，反馈或参与修复请前往 [GitHub Issues](https://github.com/krst4l/yiyu-ledger/issues)。
+目前仅有一加 13 的部分实机记录，不能代表同品牌其他机型。排错记录见 [设备记录](docs/device-validation.md)；欢迎用 [机型兼容性反馈表](https://github.com/krst4l/yiyu-ledger/issues/new?template=device-compatibility.yml) 补充其他设备结果。
 
 ## 本地数据
 

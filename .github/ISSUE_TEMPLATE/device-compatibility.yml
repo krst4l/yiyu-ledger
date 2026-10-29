@@ -1,0 +1,74 @@
+name: 安卓机型兼容性
+description: 反馈不同安卓手机上的手动记账、自动识别或后台运行结果
+title: "[机型兼容] 品牌型号 / Android 版本 / 问题概述"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢补充实机结果。请使用已有账单或正常使用中的通知，无需专门付款。
+        请勿上传账单截图、通知正文、账号、交易号、设备序列号、数据库或完整日志。安全漏洞请按 SECURITY.md 私密反馈。
+  - type: input
+    id: device
+    attributes:
+      label: 手机品牌与型号
+      placeholder: 例如：一加 13 / PJZ110（不要填写序列号）
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Android 与系统版本
+      placeholder: 例如：Android 15 / ColorOS 15；不清楚的部分可写未知
+    validations:
+      required: true
+  - type: input
+    id: app_version
+    attributes:
+      label: 粥粥记账版本
+      placeholder: 例如：0.4.1；自行编译时可补充 commit
+    validations:
+      required: true
+  - type: dropdown
+    id: scenario
+    attributes:
+      label: 本次反馈的功能
+      options:
+        - 付款页面识别
+        - 付款通知识别
+        - 后台服务或权限
+        - 手动记账或界面
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 来源应用与版本
+      description: 自动识别问题请填写；注明是否分身或工作资料。不要填写账号。
+      placeholder: 例如：主支付宝 10.x；非识别问题可填不适用
+    validations:
+      required: true
+  - type: textarea
+    id: service_state
+    attributes:
+      label: 开关、权限与后台状态
+      description: 填写应用内识别开关、来源是否选中、通知使用权或无障碍状态，以及是否允许后台运行、是否清过后台。不清楚可写未知。
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: 操作与实际结果
+      description: 简述步骤、预期和实际结果。页面识别请提供状态文字（如交易成功），说明候选是否出现、哪些字段已核对正确；不要填写真实金额或商户。
+      placeholder: |
+        1. 打开已有的“交易成功”付款详情，停留约 10 秒。
+        2. 正常切回“待核对”，未清后台。
+        预期：生成一条待核对候选。
+        实际：候选出现，金额和商户正确，日期尚未核对。
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility_report
+    attributes:
+      label: 兼容性信息（可选）
+      description: 在“我的 → 自动记账 → 机型与后台设置”手动复制，检查后粘贴。也可补充固定诊断原因和节点计数，请勿粘贴完整日志。
+      render: text

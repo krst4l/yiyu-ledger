@@ -4,11 +4,13 @@
 
 ## 反馈问题
 
-在 [Issues](https://github.com/krst4l/yiyu-ledger/issues) 提供以下信息：
+自动识别或后台运行问题可填写 [机型兼容性反馈表](https://github.com/krst4l/yiyu-ledger/issues/new?template=device-compatibility.yml)，其他问题在 [Issues](https://github.com/krst4l/yiyu-ledger/issues) 提供以下信息：
 
 - 应用版本、手机型号、Android 版本，以及来源应用和版本。
 - 复现步骤、预期行为、实际结果。
 - 自动识别问题注明使用通知还是页面识别、系统授权状态，以及“我的 → 自动记账”中的固定诊断状态和原因。
+
+可在“我的 → 自动记账 → 机型与后台设置”手动复制兼容性信息，检查后粘贴到反馈中。机型结果按系统、应用和来源版本分别记录，具体范围见 [适配指南](docs/android-compatibility.md)。
 
 收到事件或服务已连接不等于成功入账。请使用合成或脱敏示例，不上传真实账单、通知正文、账号、交易号或数据库。安全漏洞请按 [SECURITY.md](SECURITY.md) 私密反馈。
 
