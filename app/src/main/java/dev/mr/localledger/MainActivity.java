@@ -218,9 +218,9 @@ public final class MainActivity extends Activity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(22), dp(12), dp(16), dp(8));
         LinearLayout heading = vertical();
-        String title = recognitionOpen ? "自动记账" : reviewOpen ? "待核对" : new String[]{"一隅记账", "账本日历", "收支分析", "我的账本"}[selectedTab];
+        String title = recognitionOpen ? "自动记账" : reviewOpen ? "待核对" : new String[]{"粥粥记账", "账本日历", "收支分析", "我的账本"}[selectedTab];
         heading.addView(text(title, 23, INK, true));
-        TextView subtitle = text("YIYU  /  PERSONAL LEDGER", 10, MUTED, false);
+        TextView subtitle = text("ZHOUZHOU  /  PERSONAL LEDGER", 10, MUTED, false);
         subtitle.setTypeface(Typeface.MONOSPACE);
         subtitle.setLetterSpacing(.1f);
         heading.addView(subtitle);
@@ -644,7 +644,7 @@ public final class MainActivity extends Activity {
         identity.setBackground(TacticalVisuals.panel(this, false));
         identity.addView(TacticalVisuals.operator(this, uiPreferences.operatorStyle()), new LinearLayout.LayoutParams(dp(80), dp(104)));
         LinearLayout label = vertical(); label.setPadding(dp(16), 0, 0, 0);
-        label.addView(text("一隅记账", 21, INK, true));
+        label.addView(text("粥粥记账", 21, INK, true));
         label.addView(text("无需账号 · 数据保存在本机", 11, MUTED, false));
         identity.addView(label); content.addView(identity);
         spacer(content, 20);
@@ -658,8 +658,8 @@ public final class MainActivity extends Activity {
         settingRow("消费金额换成藏品", "真实人民币旁显示近似物品数量", uiPreferences.lootEnabled() ? "已开启" : "已关闭",
                 () -> { uiPreferences.setLootEnabled(!uiPreferences.lootEnabled()); render(); });
         settingRow("物品对照与参考金额", LootCatalog.items().size() + " 项参考藏品 · " + LootCatalog.configuredCount(uiPreferences) + " 项已设金额", "设置", this::showLootReferences);
-        String[] outfits = {"侦察员", "支援员", "工程师"};
-        settingRow("Q 版伙伴", outfits[uiPreferences.operatorStyle()] + " · 原创装扮", "切换", this::chooseOperator);
+        String[] outfits = {"毛茸侦察员", "麦晓雯", "猫耳伙伴"};
+        settingRow("Q 版伙伴", outfits[uiPreferences.operatorStyle()], "切换", this::chooseOperator);
         spacer(content, 18);
         sectionHeading("自动记账", "", null);
         settingRow("识别状态", captureStatus(), "查看", this::openRecognition);
@@ -669,7 +669,7 @@ public final class MainActivity extends Activity {
         settingRow("导出账本", "导出全部可见记录为 CSV", "导出", this::exportCsv);
         settingRow("隐私说明", "本机处理、权限范围与数据保留", "阅读", this::showPrivacy);
         spacer(content, 18);
-        settingRow("一隅记账 0.4.0", "MIT 开源 · 实验版本", "许可", this::showLicense);
+        settingRow("粥粥记账 0.4.1", "MIT 开源 · 实验版本", "许可", this::showLicense);
         paragraph(content, "CSV 未加密，当前无法导入恢复。卸载或清除数据会丢失账本。", 11);
     }
     private void profileShortcut(LinearLayout row, String icon, String name, Runnable action) {
@@ -683,21 +683,35 @@ public final class MainActivity extends Activity {
     private void openRecognition() { recognitionOpen = true; reviewOpen = false; render(); }
     private void chooseOperator() {
         LinearLayout options = vertical();
-        options.setPadding(dp(16), dp(8), dp(16), dp(8));
-        AlertDialog chooser = new AlertDialog.Builder(this).setTitle("选择 Q 版伙伴").setView(options)
+        options.setPadding(dp(12), dp(8), dp(12), dp(8));
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.addView(options);
+        AlertDialog chooser = new AlertDialog.Builder(this).setTitle("选择 Q 版伙伴").setView(scroll)
                 .setNegativeButton("返回", null).create();
-        String[] names = {"侦察员", "支援员", "工程师"};
+        String[] names = {"毛茸侦察员", "麦晓雯", "猫耳伙伴"};
         for (int i = 0; i < names.length; i++) {
             final int variant = i;
+            boolean selected = variant == uiPreferences.operatorStyle();
             LinearLayout row = horizontal();
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackground(feedback(variant == uiPreferences.operatorStyle() ? SURFACE : Color.TRANSPARENT, 6));
-            row.addView(TacticalVisuals.operator(this, variant), new LinearLayout.LayoutParams(dp(68), dp(82)));
-            row.addView(text(names[i], 16, INK, true), new LinearLayout.LayoutParams(0, -2, 1));
-            row.addView(text(variant == uiPreferences.operatorStyle() ? "已选" : "选择", 12, BLUE, false));
-            row.setContentDescription(names[i] + (variant == uiPreferences.operatorStyle() ? "，已选中" : ""));
+            row.setPadding(dp(8), dp(8), dp(12), dp(8));
+            row.setMinimumHeight(dp(148));
+            row.setBackground(feedback(selected ? SURFACE : Color.TRANSPARENT, 6));
+            row.addView(TacticalVisuals.operator(this, variant), new LinearLayout.LayoutParams(dp(104), dp(132)));
+            LinearLayout caption = vertical();
+            caption.setPadding(dp(16), 0, 0, 0);
+            caption.addView(text(names[i], 16, INK, true));
+            spacer(caption, 8);
+            caption.addView(text(selected ? "已选中" : "点按选择", 12, selected ? BLUE : MUTED, false));
+            row.addView(caption, new LinearLayout.LayoutParams(0, -2, 1));
+            row.setSelected(selected);
+            row.setFocusable(true);
+            row.setContentDescription(names[i] + (selected ? "，已选中" : "，点按选择"));
             row.setOnClickListener(v -> { uiPreferences.setOperatorStyle(variant); chooser.dismiss(); render(); });
-            options.addView(row, new LinearLayout.LayoutParams(-1, -2));
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(-1, -2);
+            rowParams.setMargins(0, 0, 0, dp(6));
+            options.addView(row, rowParams);
         }
         chooser.show();
     }
@@ -922,7 +936,7 @@ public final class MainActivity extends Activity {
             return;
         }
         new AlertDialog.Builder(this).setTitle("使用付款页面文字")
-                .setMessage("需在系统无障碍设置中手动开启“一隅记账 · 付款页面识别”。开启后，仅从你选定来源的可访问页面提取付款状态、金额和日期等文字。\n\n不自动点击、输入、付款或截屏；不上传，不保存整段页面原文。遇到密码或可编辑内容、过大页面时放弃解析。可随时在应用内或系统中关闭。\n\n页面候选会进入待核对；未能识别交易日期时，必须由你确认日期和时间。侧载应用如遇授权限制，可在系统应用详情查看“允许受限制的设置”。")
+                .setMessage("需在系统无障碍设置中手动开启“粥粥记账 · 付款页面识别”。开启后，仅从你选定来源的可访问页面提取付款状态、金额和日期等文字。\n\n不自动点击、输入、付款或截屏；不上传，不保存整段页面原文。遇到密码或可编辑内容、过大页面时放弃解析。可随时在应用内或系统中关闭。\n\n页面候选会进入待核对；未能识别交易日期时，必须由你确认日期和时间。侧载应用如遇授权限制，可在系统应用详情查看“允许受限制的设置”。")
                 .setPositiveButton("同意，去授权", (d, w) -> {
                     settings.setAccessibilityCaptureEnabled(true); openSettings(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
                 }).setNegativeButton("取消", null).show();
@@ -1116,7 +1130,7 @@ public final class MainActivity extends Activity {
     }
     private void exportCsv() {
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT); intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("text/csv"); intent.putExtra(Intent.EXTRA_TITLE, "一隅记账-" + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.CHINA).format(new Date()) + ".csv");
+        intent.setType("text/csv"); intent.putExtra(Intent.EXTRA_TITLE, "粥粥记账-" + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.CHINA).format(new Date()) + ".csv");
         try { startActivityForResult(intent, EXPORT_CSV); }
         catch (RuntimeException error) { toast("未找到文件保存入口，请检查系统文件管理器"); }
     }

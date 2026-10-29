@@ -48,5 +48,5 @@ dependencyResolutionManagement {
         if (!fallbackFirst) { officialFallback() }
     }
 }
-rootProject.name = 'YiyuLedger'
+rootProject.name = 'ZhouzhouLedger'
 include ':app'

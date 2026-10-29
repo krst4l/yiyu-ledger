@@ -49,7 +49,7 @@ try {
     }
     if ($LASTEXITCODE -ne 0) { throw "APK build failed with exit code $LASTEXITCODE" }
     $ledgerApk = Join-Path $ledgerProject 'app/build/outputs/apk/debug/app-debug.apk'
-    $ledgerOutput = Join-Path $ledgerProject 'YiyuLedger.apk'
+    $ledgerOutput = Join-Path $ledgerProject 'ZhouzhouLedger.apk'
     Copy-Item -LiteralPath $ledgerApk -Destination $ledgerOutput -Force
     Write-Output $ledgerOutput
 } finally {

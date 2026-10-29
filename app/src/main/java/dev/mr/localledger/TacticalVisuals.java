@@ -10,10 +10,11 @@ import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.view.View;
+import android.widget.ImageView;
 
 /**
- * Original, local vector artwork for the field-ledger theme.
- * No game characters, insignia, screenshots or external assets are used.
+ * Local character illustrations and independently drawn generic loot graphics.
+ * Character references and generation details are recorded in docs/character-art.md.
  */
 public final class TacticalVisuals {
     private static final int BG = Color.rgb(16, 20, 18);
@@ -25,14 +26,23 @@ public final class TacticalVisuals {
 
     private TacticalVisuals() {}
 
-    /** Decorative original chibi operator. Suggested size: 130 x 158 dp or 150 x 180 dp. */
+    /** Decorative companion illustration. */
     public static View operator(Context context) {
         return operator(context, 0);
     }
 
-    /** Outfits: 0 scout, 1 support, 2 engineer. Unknown values use the scout outfit. */
+    /** Companions: 0 furry scout, 1 Mai, 2 cat-ear partner. Unknown values use 0. */
     public static View operator(Context context, int variant) {
-        return new IllustrationView(context, true, "default", variant >= 0 && variant <= 2 ? variant : 0);
+        int[] resources = { R.drawable.companion_furry, R.drawable.companion_mai,
+                R.drawable.companion_catear };
+        ImageView illustration = new ImageView(context);
+        illustration.setImageResource(resources[variant >= 0 && variant < resources.length ? variant : 0]);
+        illustration.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        illustration.setAdjustViewBounds(true);
+        illustration.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        illustration.setFocusable(false);
+        illustration.setClickable(false);
+        return illustration;
     }
 
     /** Decorative sealed equipment case and red crystal. Suggested size: 104 x 90 dp. */
@@ -42,7 +52,7 @@ public final class TacticalVisuals {
 
     /** Generic objects: watch, gold, diamond, case, crown, disk; otherwise crystal and case. */
     public static View loot(Context context, String kind) {
-        return new IllustrationView(context, false, kind == null ? "default" : kind, 0);
+        return new IllustrationView(context, kind == null ? "default" : kind);
     }
 
     /** Cut-corner graphite surface. Emphasis adds one small red edge mark. */
@@ -57,15 +67,11 @@ public final class TacticalVisuals {
     private static final class IllustrationView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();
-        private final boolean portrait;
         private final String kind;
-        private final int variant;
 
-        IllustrationView(Context context, boolean portrait, String kind, int variant) {
+        IllustrationView(Context context, String kind) {
             super(context);
-            this.portrait = portrait;
             this.kind = kind;
-            this.variant = variant;
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
             setFocusable(false);
             setClickable(false);
@@ -74,156 +80,32 @@ public final class TacticalVisuals {
         }
 
         @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            int desiredWidth = Math.round(dp(getContext(), portrait ? 138 : 112));
-            int desiredHeight = Math.round(dp(getContext(), portrait ? 170 : 98));
+            int desiredWidth = Math.round(dp(getContext(), 112));
+            int desiredHeight = Math.round(dp(getContext(), 98));
             setMeasuredDimension(resolveSize(desiredWidth, widthMeasureSpec),
                     resolveSize(desiredHeight, heightMeasureSpec));
         }
 
         @Override protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            float sourceWidth = portrait ? 180 : 160;
-            float sourceHeight = portrait ? 220 : 140;
+            float sourceWidth = 160;
+            float sourceHeight = 140;
             float scale = Math.min(getWidth() / sourceWidth, getHeight() / sourceHeight);
             if (scale <= 0) return;
             canvas.save();
             canvas.translate((getWidth() - sourceWidth * scale) / 2f,
                     (getHeight() - sourceHeight * scale) / 2f);
             canvas.scale(scale, scale);
-            if (portrait) {
-                drawOperator(canvas);
-            } else {
-                switch (kind) {
-                    case "watch": drawWatch(canvas); break;
-                    case "gold": drawGold(canvas); break;
-                    case "diamond": drawDiamond(canvas); break;
-                    case "case": drawCase(canvas); break;
-                    case "crown": drawCrown(canvas); break;
-                    case "disk": drawDisk(canvas); break;
-                    default: drawLoot(canvas); break;
-                }
+            switch (kind) {
+                case "watch": drawWatch(canvas); break;
+                case "gold": drawGold(canvas); break;
+                case "diamond": drawDiamond(canvas); break;
+                case "case": drawCase(canvas); break;
+                case "crown": drawCrown(canvas); break;
+                case "disk": drawDisk(canvas); break;
+                default: drawLoot(canvas); break;
             }
             canvas.restore();
-        }
-
-        private void drawOperator(Canvas c) {
-            // Soft proportions and a large visible face keep this original character approachable.
-            roundRect(c, Color.rgb(8, 12, 10), 35, 204, 153, 213, 5);
-            roundRect(c, LINE, 118, 132, 155, 184, 12);
-            roundRect(c, variant == 1 ? Color.rgb(121, 64, 55) : Color.rgb(71, 84, 72),
-                    128, 140, 152, 174, 7);
-            if (variant == 0) stroke(c, MUTED, 2.5f, 142, 143, 142, 121);
-
-            // Little boots and short coveralls, no weapons or rank insignia.
-            roundRect(c, BG, 61, 179, 83, 210, 6);
-            roundRect(c, BG, 104, 179, 126, 210, 6);
-            int jacket = variant == 1 ? Color.rgb(188, 199, 175)
-                    : variant == 2 ? Color.rgb(142, 153, 124) : Color.rgb(117, 133, 113);
-            int vest = variant == 1 ? Color.rgb(116, 134, 113)
-                    : variant == 2 ? Color.rgb(77, 85, 69) : Color.rgb(71, 88, 72);
-            roundRect(c, jacket, 54, 125, 133, 190, 22);
-            roundRect(c, vest, 65, 136, 120, 188, 12);
-            polygon(c, Color.rgb(182, 194, 171), 74, 140, 85, 140, 77, 173, 68, 171);
-            roundRect(c, LINE, 82, 155, 111, 177, 5);
-            stroke(c, MUTED, 1.8f, 86, 161, 106, 161);
-            roundRect(c, Color.rgb(195, 207, 182), 37, 140, 58, 172, 10);
-            roundRect(c, Color.rgb(195, 207, 182), 129, 140, 148, 172, 10);
-            roundRect(c, BG, 35, 162, 56, 178, 6);
-            roundRect(c, BG, 131, 162, 150, 178, 6);
-            stroke(c, Color.rgb(57, 72, 59), 2, 94, 180, 94, 192);
-
-            if (variant == 0) {
-                // Scout: broad red scarf and one loose end.
-                polygon(c, Color.rgb(153, 53, 46), 104, 124, 125, 128, 138, 155,
-                        123, 150, 118, 157, 108, 139);
-                roundRect(c, RED, 56, 116, 133, 139, 11);
-                stroke(c, Color.rgb(249, 151, 130), 2, 64, 123, 103, 125);
-            } else if (variant == 1) {
-                // Support: plain red supply pouch, no protected medical insignia.
-                roundRect(c, LINE, 56, 118, 132, 136, 8);
-                stroke(c, Color.rgb(207, 216, 192), 5, 63, 133, 108, 168);
-                roundRect(c, Color.rgb(153, 53, 46), 102, 156, 146, 187, 6);
-                roundRect(c, RED, 101, 153, 145, 180, 6);
-                stroke(c, Color.rgb(255, 186, 161), 2, 109, 163, 137, 163);
-                roundRect(c, INK, 111, 170, 122, 175, 1);
-            } else {
-                // Engineer: compact tools stay in a side pouch rather than in the hands.
-                roundRect(c, LINE, 57, 117, 132, 135, 7);
-                roundRect(c, RED, 64, 126, 78, 132, 2);
-                roundRect(c, BG, 111, 160, 147, 191, 5);
-                roundRect(c, Color.rgb(118, 132, 104), 110, 164, 146, 184, 3);
-                stroke(c, INK, 4, 119, 167, 119, 150);
-                ring(c, INK, 2.8f, 119, 147, 5);
-                roundRect(c, RED, 130, 148, 137, 165, 2);
-                stroke(c, MUTED, 2, 133.5f, 148, 133.5f, 141);
-            }
-
-            // All outfits share a warm, unobscured face; headwear changes the silhouette.
-            roundRect(c, variant == 1 ? Color.rgb(68, 76, 61) : LINE,
-                    29, 29, 146, 121, variant == 1 ? 35 : 40);
-            roundRect(c, Color.rgb(237, 226, 202), 40, 61, 132, 125, 30);
-            roundRect(c, Color.rgb(208, 198, 171), 111, 71, 135, 112, 14);
-            if (variant == 0) drawScoutHeadwear(c);
-            else if (variant == 1) drawSupportHeadwear(c);
-            else drawEngineerHeadwear(c);
-
-            // Two distinct eyes are readable even at 72 dp, with a slight left-facing bias.
-            roundRect(c, BG, 53, 91, 62, 107, 4);
-            roundRect(c, BG, 86, 90, 96, 106, 4);
-            roundRect(c, INK, 55, 92, 58, 96, 1.5f);
-            roundRect(c, INK, 88, 91, 91, 95, 1.5f);
-            stroke(c, Color.rgb(88, 104, 84), 2, 69, 112, 77, 113, 82, 110);
-            roundRect(c, Color.rgb(218, 164, 137), 46, 108, 57, 112, 2);
-            roundRect(c, Color.rgb(218, 164, 137), 94, 107, 105, 111, 2);
-
-            if (variant == 0) {
-                // Simple radio geometry is not based on a named game character.
-                roundRect(c, SURFACE, 124, 69, 151, 111, 12);
-                roundRect(c, MUTED, 132, 78, 145, 102, 6);
-                roundRect(c, RED, 137, 84, 141, 95, 2);
-                stroke(c, LINE, 3, 132, 105, 122, 116, 107, 116);
-                roundRect(c, LINE, 102, 112, 112, 119, 3);
-            } else if (variant == 2) {
-                roundRect(c, LINE, 126, 72, 149, 109, 9);
-                roundRect(c, Color.rgb(194, 207, 172), 132, 79, 145, 102, 5);
-            }
-        }
-
-        private void drawScoutHeadwear(Canvas c) {
-            roundRect(c, Color.rgb(160, 176, 146), 29, 22, 147, 82, 30);
-            polygon(c, Color.rgb(109, 131, 102), 98, 23, 129, 27, 144, 44,
-                    147, 78, 116, 78, 111, 44);
-            roundRect(c, Color.rgb(209, 218, 193), 43, 32, 103, 42, 5);
-            polygon(c, Color.rgb(194, 208, 176), 21, 71, 122, 66, 143, 78,
-                    139, 85, 25, 84, 17, 79);
-            polygon(c, LINE, 26, 81, 129, 78, 133, 84, 30, 89);
-        }
-
-        private void drawSupportHeadwear(Canvas c) {
-            roundRect(c, Color.rgb(93, 104, 80), 32, 23, 144, 77, 29);
-            polygon(c, Color.rgb(93, 104, 80), 34, 52, 45, 48, 65, 43,
-                    98, 41, 129, 52, 139, 80, 124, 94, 119, 69, 107, 67,
-                    108, 81, 88, 67, 75, 71, 62, 83, 61, 69, 39, 86);
-            stroke(c, Color.rgb(143, 158, 120), 2.4f, 47, 40, 69, 33, 105, 35);
-            roundRect(c, LINE, 40, 44, 132, 68, 7);
-            roundRect(c, MUTED, 47, 46, 82, 65, 5);
-            roundRect(c, MUTED, 88, 46, 123, 65, 5);
-            roundRect(c, Color.rgb(197, 212, 176), 51, 49, 78, 61, 3);
-            roundRect(c, Color.rgb(197, 212, 176), 92, 49, 119, 61, 3);
-            stroke(c, INK, 1.5f, 54, 58, 66, 51);
-            stroke(c, INK, 1.5f, 96, 58, 108, 51);
-        }
-
-        private void drawEngineerHeadwear(Canvas c) {
-            roundRect(c, Color.rgb(206, 216, 183), 34, 28, 142, 79, 24);
-            polygon(c, Color.rgb(137, 154, 115), 102, 29, 127, 34, 140, 49,
-                    142, 77, 119, 77, 116, 46);
-            polygon(c, Color.rgb(236, 237, 205), 25, 69, 120, 64, 144, 76,
-                    132, 86, 20, 84, 14, 78);
-            polygon(c, LINE, 24, 82, 128, 79, 131, 84, 28, 88);
-            roundRect(c, Color.rgb(137, 154, 115), 58, 36, 66, 64, 3);
-            roundRect(c, Color.rgb(137, 154, 115), 79, 34, 87, 62, 3);
-            roundRect(c, RED, 103, 48, 123, 61, 3);
         }
 
         private void drawWatch(Canvas c) {
